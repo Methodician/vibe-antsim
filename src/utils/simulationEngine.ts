@@ -1,7 +1,16 @@
 // Simulation engine for ant behaviors
 
 class Ant {
-  constructor(id, x, y, direction = Math.random() * Math.PI * 2) {
+  id: number;
+  x: number;
+  y: number;
+  direction: number;
+  speed: number;
+  color: string;
+  size: number;
+  hasTurnedRecently: boolean;
+
+  constructor(id: number, x: number, y: number, direction: number = Math.random() * Math.PI * 2) {
     this.id = id;
     this.x = x;
     this.y = y;
@@ -12,7 +21,7 @@ class Ant {
     this.hasTurnedRecently = false;
   }
 
-  move(width, height) {
+  move(width: number, height: number): void {
     // Random direction change
     if (Math.random() < 0.05) {
       this.direction += (Math.random() - 0.5) * Math.PI / 4;
@@ -29,7 +38,7 @@ class Ant {
     if (this.y > height) this.y = 0;
   }
 
-  draw(ctx) {
+  draw(ctx: CanvasRenderingContext2D): void {
     ctx.fillStyle = this.color;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
@@ -46,7 +55,13 @@ class Ant {
 }
 
 class SimulationEngine {
-  constructor(canvasWidth, canvasHeight) {
+  ants: Ant[];
+  width: number;
+  height: number;
+  isRunning: boolean;
+  animationFrameId: number | null;
+
+  constructor(canvasWidth: number, canvasHeight: number) {
     this.ants = [];
     this.width = canvasWidth;
     this.height = canvasHeight;
@@ -54,7 +69,7 @@ class SimulationEngine {
     this.animationFrameId = null;
   }
 
-  initialize(antCount = 20) {
+  initialize(antCount: number = 20): void {
     this.ants = [];
     for (let i = 0; i < antCount; i++) {
       const x = Math.random() * this.width;
@@ -63,14 +78,14 @@ class SimulationEngine {
     }
   }
 
-  start() {
+  start(): void {
     if (!this.isRunning) {
       this.isRunning = true;
       this.animate();
     }
   }
 
-  stop() {
+  stop(): void {
     this.isRunning = false;
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
@@ -78,13 +93,13 @@ class SimulationEngine {
     }
   }
 
-  update() {
+  update(): void {
     for (const ant of this.ants) {
       ant.move(this.width, this.height);
     }
   }
 
-  render(ctx) {
+  render(ctx: CanvasRenderingContext2D): void {
     // Clear canvas
     ctx.clearRect(0, 0, this.width, this.height);
     
@@ -94,7 +109,7 @@ class SimulationEngine {
     }
   }
 
-  animate() {
+  animate(): void {
     if (!this.isRunning) return;
     
     this.update();

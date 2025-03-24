@@ -10,7 +10,7 @@ import Home from './pages/Home';
 import Simulation from './pages/Simulation';
 import AuthPage from './pages/AuthPage';
 
-function App() {
+const App: React.FC = () => {
   return (
     <Router>
       <div className="App">

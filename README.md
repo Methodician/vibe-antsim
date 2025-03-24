@@ -16,7 +16,7 @@ Vibe Ant Simulation is a web-based simulation of ant colony behavior. The applic
 
 ## 🛠️ Technologies Used
 
-- React.js
+- React.js with TypeScript
 - React Router
 - Firebase (Authentication, Firestore)
 - HTML5 Canvas for rendering

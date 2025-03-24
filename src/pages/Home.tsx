@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-function Home() {
+const Home: React.FC = () => {
   return (
     <div className="home-container">
       <div className="hero-section">

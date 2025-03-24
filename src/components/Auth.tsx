@@ -4,15 +4,17 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  User,
+  AuthError
 } from 'firebase/auth';
 
-function Auth() {
-  const [user, setUser] = useState(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLogin, setIsLogin] = useState(true);
-  const [error, setError] = useState(null);
+const Auth: React.FC = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [isLogin, setIsLogin] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -22,7 +24,7 @@ function Auth() {
     return () => unsubscribe();
   }, []);
 
-  const handleSignIn = async (e) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     
@@ -31,11 +33,12 @@ function Auth() {
       setEmail('');
       setPassword('');
     } catch (error) {
-      setError(error.message);
+      const authError = error as AuthError;
+      setError(authError.message);
     }
   };
 
-  const handleSignUp = async (e) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     
@@ -44,7 +47,8 @@ function Auth() {
       setEmail('');
       setPassword('');
     } catch (error) {
-      setError(error.message);
+      const authError = error as AuthError;
+      setError(authError.message);
     }
   };
 
@@ -52,7 +56,8 @@ function Auth() {
     try {
       await signOut(auth);
     } catch (error) {
-      setError(error.message);
+      const authError = error as AuthError;
+      setError(authError.message);
     }
   };
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import Auth from '../components/Auth';
 
-function AuthPage() {
+const AuthPage: React.FC = () => {
   return (
     <div>
       <h1>Account</h1>

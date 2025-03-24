@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SimulationEngine } from '../utils/simulationEngine';
 
-function Simulation() {
-  const canvasRef = useRef(null);
-  const simulationRef = useRef(null);
-  const [isRunning, setIsRunning] = useState(false);
-  const [antCount, setAntCount] = useState(20);
+const Simulation: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const simulationRef = useRef<SimulationEngine | null>(null);
+  const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [antCount, setAntCount] = useState<number>(20);
   
   // Initialize simulation on component mount
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
+    
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
     const width = canvas.width;
     const height = canvas.height;
     
@@ -33,7 +37,11 @@ function Simulation() {
   useEffect(() => {
     const simulation = simulationRef.current;
     const canvas = canvasRef.current;
+    
+    if (!simulation || !canvas) return;
+    
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     
     if (isRunning) {
       simulation.start();
@@ -66,14 +74,18 @@ function Simulation() {
     setTimeout(() => {
       const simulation = simulationRef.current;
       const canvas = canvasRef.current;
+      
+      if (!simulation || !canvas) return;
+      
       const ctx = canvas.getContext('2d');
+      if (!ctx) return;
       
       simulation.initialize(antCount);
       simulation.render(ctx);
     }, 50);
   };
   
-  const handleAntCountChange = (e) => {
+  const handleAntCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const count = parseInt(e.target.value, 10);
     setAntCount(count);
     resetSimulation();

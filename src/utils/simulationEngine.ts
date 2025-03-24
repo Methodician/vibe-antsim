@@ -1,5 +1,50 @@
 // Simulation engine for ant behaviors
 
+// Nest class to represent the ants' home
+class Nest {
+  x: number;
+  y: number;
+  radius: number;
+  color: string;
+  
+  constructor(x: number, y: number, radius: number = 30) {
+    this.x = x;
+    this.y = y;
+    this.radius = radius;
+    this.color = '#8B4513'; // Brown color for the nest
+  }
+  
+  draw(ctx: CanvasRenderingContext2D): void {
+    // Draw the outer nest circle
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw the inner nest opening
+    ctx.fillStyle = '#5D3A1A'; // Darker brown for the nest entrance
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  // Create a new ant at a random position within the nest
+  createAnt(id: number): Ant {
+    // Random angle and distance from center (within nest)
+    const angle = Math.random() * Math.PI * 2;
+    const distance = Math.random() * this.radius * 0.6;
+    
+    // Calculate position
+    const x = this.x + Math.cos(angle) * distance;
+    const y = this.y + Math.sin(angle) * distance;
+    
+    // Direction points outward from nest center
+    const direction = angle;
+    
+    return new Ant(id, x, y, direction);
+  }
+}
+
 class Ant {
   id: number;
   x: number;
@@ -9,6 +54,7 @@ class Ant {
   color: string;
   size: number;
   hasTurnedRecently: boolean;
+  homeNest: Nest | null;
 
   constructor(id: number, x: number, y: number, direction: number = Math.random() * Math.PI * 2) {
     this.id = id;
@@ -19,11 +65,19 @@ class Ant {
     this.color = '#333333';
     this.size = 3;
     this.hasTurnedRecently = false;
+    this.homeNest = null; // Will be set when the ant is assigned to a nest
   }
 
   move(width: number, height: number): void {
+    // If the ant has a home nest, occasionally head back to the nest
+    if (this.homeNest && Math.random() < 0.01) {
+      // Calculate angle to the nest
+      const dx = this.homeNest.x - this.x;
+      const dy = this.homeNest.y - this.y;
+      this.direction = Math.atan2(dy, dx);
+    } 
     // Random direction change
-    if (Math.random() < 0.05) {
+    else if (Math.random() < 0.05) {
       this.direction += (Math.random() - 0.5) * Math.PI / 4;
     }
 
@@ -31,11 +85,23 @@ class Ant {
     this.x += Math.cos(this.direction) * this.speed;
     this.y += Math.sin(this.direction) * this.speed;
 
-    // Wrap around screen edges
-    if (this.x < 0) this.x = width;
-    if (this.x > width) this.x = 0;
-    if (this.y < 0) this.y = height;
-    if (this.y > height) this.y = 0;
+    // Bounce off screen edges instead of wrapping
+    if (this.x < 0) {
+      this.x = 0;
+      this.direction = Math.PI - this.direction;
+    }
+    if (this.x > width) {
+      this.x = width;
+      this.direction = Math.PI - this.direction;
+    }
+    if (this.y < 0) {
+      this.y = 0;
+      this.direction = -this.direction;
+    }
+    if (this.y > height) {
+      this.y = height;
+      this.direction = -this.direction;
+    }
   }
 
   draw(ctx: CanvasRenderingContext2D): void {
@@ -56,6 +122,7 @@ class Ant {
 
 class SimulationEngine {
   ants: Ant[];
+  nest: Nest;
   width: number;
   height: number;
   isRunning: boolean;
@@ -67,15 +134,44 @@ class SimulationEngine {
     this.height = canvasHeight;
     this.isRunning = false;
     this.animationFrameId = null;
+    
+    // Create nest in the center of the canvas by default
+    this.nest = new Nest(canvasWidth / 2, canvasHeight / 2);
   }
 
   initialize(antCount: number = 20): void {
     this.ants = [];
     for (let i = 0; i < antCount; i++) {
-      const x = Math.random() * this.width;
-      const y = Math.random() * this.height;
-      this.ants.push(new Ant(i, x, y));
+      // Create ant from the nest
+      const ant = this.nest.createAnt(i);
+      ant.homeNest = this.nest; // Set the ant's home nest
+      this.ants.push(ant);
     }
+  }
+  
+  // Updates the number of ants without resetting other simulation properties
+  updateAntCount(newCount: number): void {
+    const currentCount = this.ants.length;
+    
+    if (newCount === currentCount) return;
+    
+    if (newCount > currentCount) {
+      // Add more ants from the nest
+      for (let i = currentCount; i < newCount; i++) {
+        const ant = this.nest.createAnt(i);
+        ant.homeNest = this.nest;
+        this.ants.push(ant);
+      }
+    } else {
+      // Remove excess ants
+      this.ants = this.ants.slice(0, newCount);
+    }
+  }
+  
+  // Set a new position for the nest
+  setNestPosition(x: number, y: number): void {
+    this.nest.x = x;
+    this.nest.y = y;
   }
 
   start(): void {
@@ -103,6 +199,9 @@ class SimulationEngine {
     // Clear canvas
     ctx.clearRect(0, 0, this.width, this.height);
     
+    // Draw the nest
+    this.nest.draw(ctx);
+    
     // Draw all ants
     for (const ant of this.ants) {
       ant.draw(ctx);
@@ -117,4 +216,4 @@ class SimulationEngine {
   }
 }
 
-export { SimulationEngine, Ant };
+export { SimulationEngine, Ant, Nest };

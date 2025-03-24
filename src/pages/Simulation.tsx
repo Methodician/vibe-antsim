@@ -6,8 +6,9 @@ const Simulation: React.FC = () => {
   const simulationRef = useRef<SimulationEngine | null>(null);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [antCount, setAntCount] = useState<number>(20);
+  const isInitializedRef = useRef<boolean>(false);
   
-  // Initialize simulation on component mount
+  // Create simulation engine once on component mount
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -20,10 +21,9 @@ const Simulation: React.FC = () => {
     
     // Create simulation engine
     simulationRef.current = new SimulationEngine(width, height);
-    simulationRef.current.initialize(antCount);
     
-    // Draw initial state
-    simulationRef.current.render(ctx);
+    // Initialize with default ant count
+    initializeSimulation(antCount);
     
     // Cleanup on unmount
     return () => {
@@ -31,14 +31,39 @@ const Simulation: React.FC = () => {
         simulationRef.current.stop();
       }
     };
-  }, [antCount]);
+  }, []);  // Empty dependency array means this runs only once
+  
+  // Function to initialize or reinitialize the simulation with a given ant count
+  const initializeSimulation = (count: number) => {
+    const simulation = simulationRef.current;
+    const canvas = canvasRef.current;
+    
+    if (!simulation || !canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Stop the simulation if it's running
+    if (simulation.isRunning) {
+      simulation.stop();
+      setIsRunning(false);
+    }
+    
+    // Initialize with the given ant count
+    simulation.initialize(count);
+    
+    // Render the initial state
+    simulation.render(ctx);
+    
+    isInitializedRef.current = true;
+  };
   
   // Handle simulation running state changes
   useEffect(() => {
     const simulation = simulationRef.current;
     const canvas = canvasRef.current;
     
-    if (!simulation || !canvas) return;
+    if (!simulation || !canvas || !isInitializedRef.current) return;
     
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -68,29 +93,57 @@ const Simulation: React.FC = () => {
   };
   
   const resetSimulation = () => {
-    setIsRunning(false);
-    
-    // Use setTimeout to ensure the simulation has stopped
-    setTimeout(() => {
-      const simulation = simulationRef.current;
-      const canvas = canvasRef.current;
-      
-      if (!simulation || !canvas) return;
-      
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      
-      simulation.initialize(antCount);
-      simulation.render(ctx);
-    }, 50);
+    // Initialize with current ant count
+    initializeSimulation(antCount);
   };
   
   const handleAntCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const count = parseInt(e.target.value, 10);
     setAntCount(count);
-    resetSimulation();
+    
+    const simulation = simulationRef.current;
+    if (!simulation) return;
+    
+    // If simulation is running, update ant count without stopping
+    if (isRunning) {
+      simulation.updateAntCount(count);
+    } else {
+      // If simulation is stopped, fully reinitialize
+      initializeSimulation(count);
+    }
   };
   
+  // Function to handle canvas click for nest placement
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const simulation = simulationRef.current;
+    if (!simulation) return;
+    
+    // Get click coordinates relative to canvas
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Update nest position
+    simulation.setNestPosition(x, y);
+    
+    // Reinitialize to place ants at the new nest location
+    const wasRunning = isRunning;
+    if (wasRunning) {
+      stopSimulation();
+    }
+    
+    // Wait a moment before reinitializing
+    setTimeout(() => {
+      initializeSimulation(antCount);
+      if (wasRunning) {
+        startSimulation();
+      }
+    }, 50);
+  };
+
   return (
     <div>
       <h1>Ant Simulation</h1>
@@ -101,9 +154,7 @@ const Simulation: React.FC = () => {
         <button onClick={stopSimulation} disabled={!isRunning}>
           Stop Simulation
         </button>
-        <button onClick={resetSimulation}>
-          Reset Simulation
-        </button>
+        <button onClick={resetSimulation}>Reset Simulation</button>
         <div className="ant-count-control">
           <label htmlFor="antCount">Number of Ants: {antCount}</label>
           <input 
@@ -116,14 +167,18 @@ const Simulation: React.FC = () => {
           />
         </div>
       </div>
-      <canvas 
-        ref={canvasRef} 
-        width={800} 
-        height={600} 
-        className="simulation-canvas"
-      />
+      <div className="simulation-container">
+        <p className="nest-instruction">Click anywhere on the canvas to place the ant nest</p>
+        <canvas 
+          ref={canvasRef} 
+          width={800} 
+          height={600} 
+          className="simulation-canvas"
+          onClick={handleCanvasClick}
+        />
+      </div>
     </div>
   );
-}
+};
 
 export default Simulation;

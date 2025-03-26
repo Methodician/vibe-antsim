@@ -426,7 +426,7 @@ class Ant {
     }
 
     // For debugging, optionally draw the ant's sensors
-    if (false) {
+    if (true) {
       // Set to false to hide sensors, true to see them
       ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
 
@@ -607,16 +607,15 @@ class PheromoneGrid {
   // Draw the pheromone grid with higher color contrast for inbound and outbound trails
   draw(ctx: CanvasRenderingContext2D): void {
     const originalAlpha = ctx.globalAlpha;
-    // Set transparency for pheromones
-    ctx.globalAlpha = 0.2;
 
-    // Draw inbound pheromones (vivid red)
+    // Draw inbound pheromones at full red with variable alpha
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
         const inboundLevel = this.inboundGrid[y][x];
         if (inboundLevel > 0) {
-          const intensity = Math.min(255, Math.floor(inboundLevel * 25));
-          ctx.fillStyle = `rgb(${intensity}, 0, 0)`;
+          const inboundAlpha = Math.min(1, inboundLevel * 0.1);
+          ctx.globalAlpha = inboundAlpha;
+          ctx.fillStyle = 'rgb(255, 0, 0)';
           ctx.fillRect(
             x * this.cellSize,
             y * this.cellSize,
@@ -627,13 +626,14 @@ class PheromoneGrid {
       }
     }
 
-    // Draw outbound pheromones (vivid blue)
+    // Draw outbound pheromones at full blue with variable alpha
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
         const outboundLevel = this.outboundGrid[y][x];
         if (outboundLevel > 0) {
-          const intensity = Math.min(255, Math.floor(outboundLevel * 25));
-          ctx.fillStyle = `rgb(0, 0, ${intensity})`;
+          const outboundAlpha = Math.min(1, outboundLevel * 0.1);
+          ctx.globalAlpha = outboundAlpha;
+          ctx.fillStyle = 'rgb(0, 0, 255)';
           ctx.fillRect(
             x * this.cellSize,
             y * this.cellSize,
@@ -644,7 +644,7 @@ class PheromoneGrid {
       }
     }
 
-    // Restore original alpha
+    // Restore alpha
     ctx.globalAlpha = originalAlpha;
   }
 }

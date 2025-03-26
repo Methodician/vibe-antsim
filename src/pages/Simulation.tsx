@@ -300,7 +300,7 @@ const Simulation: React.FC = () => {
             <input
               type="range"
               id="pheromoneDecay"
-              min="0.9"
+              min="0.99"
               max="0.999"
               step="0.001"
               value={pheromoneDecayRate}

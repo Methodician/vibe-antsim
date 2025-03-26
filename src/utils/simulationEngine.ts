@@ -349,6 +349,11 @@ class Ant {
 
   // Method to help ants follow pheromone trails
   followPheromoneTrail(pheromones: PheromoneGrid, type: PheromoneType): void {
+    // Random chance to ignore pheromones
+    if (Math.random() < 0.01) {
+      this.direction += (Math.random() - 0.5) * 2.0;
+      return;
+    }
     // Check pheromone levels at three points:
     const leftX =
       this.x +
@@ -395,6 +400,12 @@ class Ant {
       this.direction += turnStrength * turnFactor;
     }
     // If ahead is strongest, maintain current course.
+
+    // If pheromones lead nowhere for too long, reset ant direction
+    if (Math.random() < 0.001) {
+      this.direction = Math.random() * Math.PI * 2;
+      // Possibly reset returningToNest or carryingFood if stuck
+    }
   }
 
   draw(ctx: CanvasRenderingContext2D): void {
@@ -480,6 +491,7 @@ class PheromoneGrid {
   height: number;
   cellSize: number;
   decayRate: number;
+  diffusionRate: number = 0.05;
 
   constructor(
     width: number,
@@ -600,8 +612,38 @@ class PheromoneGrid {
         if (this.outboundGrid[y][x] < 0.01) {
           this.outboundGrid[y][x] = 0;
         }
+
+        // Random diffusion of inbound pheromones
+        if (this.inboundGrid[y][x] > 0 && Math.random() < 0.01) {
+          const neighbor = this.getRandomNeighbor(x, y);
+          const moveAmount = this.inboundGrid[y][x] * this.diffusionRate;
+          this.inboundGrid[y][x] -= moveAmount;
+          this.inboundGrid[neighbor.y][neighbor.x] += moveAmount;
+        }
+
+        // Random diffusion of outbound pheromones
+        if (this.outboundGrid[y][x] > 0 && Math.random() < 0.01) {
+          const neighbor = this.getRandomNeighbor(x, y);
+          const moveAmount = this.outboundGrid[y][x] * this.diffusionRate;
+          this.outboundGrid[y][x] -= moveAmount;
+          this.outboundGrid[neighbor.y][neighbor.x] += moveAmount;
+        }
       }
     }
+  }
+
+  // Helper method for random diffusion
+  getRandomNeighbor(x: number, y: number): { x: number; y: number } {
+    const offsets = [
+      { x: 1, y: 0 },
+      { x: -1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 0, y: -1 },
+    ];
+    const choice = offsets[Math.floor(Math.random() * offsets.length)];
+    const nx = Math.min(Math.max(x + choice.x, 0), this.width - 1);
+    const ny = Math.min(Math.max(y + choice.y, 0), this.height - 1);
+    return { x: nx, y: ny };
   }
 
   // Draw the pheromone grid with higher color contrast for inbound and outbound trails
@@ -615,7 +657,7 @@ class PheromoneGrid {
         if (inboundLevel > 0) {
           const inboundAlpha = Math.min(1, inboundLevel * 0.1);
           ctx.globalAlpha = inboundAlpha;
-          ctx.fillStyle = 'rgb(255, 0, 0)';
+          ctx.fillStyle = 'rgb(0, 162, 24)';
           ctx.fillRect(
             x * this.cellSize,
             y * this.cellSize,
@@ -633,7 +675,7 @@ class PheromoneGrid {
         if (outboundLevel > 0) {
           const outboundAlpha = Math.min(1, outboundLevel * 0.1);
           ctx.globalAlpha = outboundAlpha;
-          ctx.fillStyle = 'rgb(0, 0, 255)';
+          ctx.fillStyle = 'rgb(106, 55, 246)';
           ctx.fillRect(
             x * this.cellSize,
             y * this.cellSize,
@@ -911,6 +953,12 @@ class SimulationEngine {
   resetPheromones(): void {
     // Reinitialize the pheromone grid with the same parameters
     this.pheromones = new PheromoneGrid(this.width, this.height);
+  }
+
+  setDiffusionRate(rate: number): void {
+    if (rate >= 0 && rate <= 1) {
+      this.pheromones.diffusionRate = rate;
+    }
   }
 }
 

@@ -8,6 +8,7 @@ const Simulation: React.FC = () => {
   const [antCount, setAntCount] = useState<number>(20);
   const [pheromoneDecayRate, setPheromoneDecayRate] = useState<number>(0.995);
   const [foodSpawnInterval, setFoodSpawnInterval] = useState<number>(10000);
+  const [diffusionRate, setDiffusionRate] = useState<number>(0.05);
   const [stats, setStats] = useState({
     time: '00:00',
     foodCollected: 0,
@@ -66,6 +67,7 @@ const Simulation: React.FC = () => {
     // Set simulation parameters
     simulation.setPheromoneDecayRate(pheromoneDecayRate);
     simulation.setFoodSpawnInterval(foodSpawnInterval);
+    simulation.setDiffusionRate(diffusionRate);
 
     // Initialize with the given ant count
     simulation.initialize(count);
@@ -131,6 +133,13 @@ const Simulation: React.FC = () => {
 
     simulation.setFoodSpawnInterval(foodSpawnInterval);
   }, [foodSpawnInterval]);
+
+  useEffect(() => {
+    const simulation = simulationRef.current;
+    if (!simulation) return;
+
+    simulation.setDiffusionRate(diffusionRate);
+  }, [diffusionRate]);
 
   // Function to update statistics
   const updateStats = () => {
@@ -198,6 +207,17 @@ const Simulation: React.FC = () => {
   ) => {
     const value = parseInt(e.target.value, 10);
     setFoodSpawnInterval(value);
+  };
+
+  const handleDiffusionRateChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = parseFloat(e.target.value);
+    setDiffusionRate(value);
+
+    const simulation = simulationRef.current;
+    if (!simulation) return;
+    simulation.setDiffusionRate(value);
   };
 
   // Function to handle canvas click for nest placement
@@ -323,6 +343,19 @@ const Simulation: React.FC = () => {
               onChange={handleFoodSpawnIntervalChange}
             />
             <small>Time between new food sources appearing</small>
+          </div>
+
+          <div className="control-item">
+            <label htmlFor="diffusionRate">Diffusion Rate</label>
+            <input
+              type="range"
+              id="diffusionRate"
+              min="0"
+              max="1"
+              step="0.01"
+              value={diffusionRate}
+              onChange={handleDiffusionRateChange}
+            />
           </div>
         </div>
       </div>

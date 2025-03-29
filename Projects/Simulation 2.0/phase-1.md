@@ -4,6 +4,29 @@
 
 Phase 1 focuses on implementing an energy system for ants, including energy consumption, hunger states, and starvation mechanics. This phase forms the foundation for the more complex nest dynamics in Phase 2.
 
+## Milestones
+
+### Milestone 1: Basic Energy Implementation
+
+- Implement ant energy properties
+- Create basic energy consumption mechanics
+- Add visual indicators for energy states
+- Test and balance basic energy flow
+
+### Milestone 2: Hunger-Driven Behaviors
+
+- Implement different hunger states
+- Create behavior modifications based on hunger
+- Develop return-to-nest behavior for hungry ants
+- Test and validate hunger state transitions
+
+### Milestone 3: Starvation Mechanics & Food Energy
+
+- Implement starvation and death mechanics
+- Develop food energy value system
+- Create UI enhancements for energy monitoring
+- Final balance and performance testing
+
 ## Implementation Checklist
 
 ### 1. Ant Energy Properties
@@ -70,6 +93,22 @@ Phase 1 focuses on implementing an energy system for ants, including energy cons
 - [ ] Analyze colony sustainability with energy constraints
 - [ ] Tune energy restoration rates from feeding
 
+### 9. Performance Benchmarking & Optimization
+
+- [ ] Establish baseline performance metrics
+- [ ] Identify and optimize energy calculation bottlenecks
+- [ ] Test performance impact of visual indicators
+- [ ] Implement performance scaling options
+- [ ] Document performance characteristics
+
+### 10. Visual Debugging Tools
+
+- [ ] Create toggleable energy state overlays
+- [ ] Implement hunger state visualization mode
+- [ ] Add path visualization for starving ants
+- [ ] Create energy consumption/restoration event indicators
+- [ ] Implement statistics panel for energy system debugging
+
 ## Technical Implementation Details
 
 ### Ant Class Extensions
@@ -118,7 +157,7 @@ enum HungerState {
 
 ```typescript
 // Energy state visualization in ant.draw method
-draw(ctx: CanvasRenderingContext2D): void {
+draw(ctx: CanvasRenderingContext2D, debugMode: boolean = false): void {
   // Set color based on hunger state
   let antColor;
   switch(this.hungerState) {
@@ -156,6 +195,25 @@ draw(ctx: CanvasRenderingContext2D): void {
     barWidth * energyRatio,
     barHeight
   );
+
+  // Debug mode visualizations
+  if (debugMode) {
+    // Draw hunger state text
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '8px Arial';
+    ctx.fillText(
+      HungerState[this.hungerState],
+      this.x + this.size + 2,
+      this.y
+    );
+
+    // Draw energy value
+    ctx.fillText(
+      `${Math.round(this.energy)}/${this.maxEnergy}`,
+      this.x + this.size + 2,
+      this.y + 10
+    );
+  }
 
   // Continue with existing drawing code...
 }
@@ -209,11 +267,19 @@ class SimulationEngine {
   // New properties
   starvationDeaths: number; // Track ant deaths by starvation
   averageColonyEnergy: number; // Average energy level across all ants
+  performanceMetrics: {
+    lastFrameTime: number;
+    frameTimes: number[];
+    avgFrameRate: number;
+  };
+  debugMode: boolean;
 
   // New methods
   updateAntEnergy(): void; // Update energy states for all ants
   removeDeadAnts(): void; // Remove ants that have died from starvation
   calculateEnergyStatistics(): void; // Calculate colony-wide energy stats
+  measurePerformance(): void; // Track frame rate and performance metrics
+  toggleDebugMode(): void; // Toggle debugging visualizations
 }
 ```
 
@@ -224,6 +290,20 @@ class SimulationEngine {
 - Energy indicators toggle
 - Colony energy statistics panel
 - Hunger behavior adjustment controls
+- Debug mode toggle
+- Performance metrics display
+- Visual debug options dropdown
+
+## Modular Implementation Strategy
+
+To ensure the system can function with partial implementation, the energy system will be developed in layers:
+
+1. **Core Layer**: Basic energy properties and consumption
+2. **Behavior Layer**: Hunger states and modified behaviors
+3. **Visualization Layer**: Energy indicators and UI elements
+4. **Ecosystem Layer**: Starvation, death, and colony statistics
+
+Each layer should be functional on its own, allowing for incremental testing and deployment.
 
 ## Balance Considerations
 
@@ -232,6 +312,13 @@ class SimulationEngine {
 - Energy states should meaningfully affect ant behavior
 - Return-to-nest behavior should be effective but not perfect
 - Energy restoration from food should be balanced with consumption rates
+
+## Performance Considerations
+
+- Energy calculations should be optimized to minimize impact on frame rate
+- Visual indicators should have toggleable detail levels for performance scaling
+- Statistics calculations should use sampling techniques for large ant populations
+- Consider using Web Workers for energy calculations if they become performance-intensive
 
 ## Next Steps After Completion
 

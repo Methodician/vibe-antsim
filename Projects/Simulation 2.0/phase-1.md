@@ -31,34 +31,34 @@ Phase 1 focuses on implementing an energy system for ants, including energy cons
 
 ### 1. Ant Energy Properties
 
-- [ ] Add `energy` and `maxEnergy` properties to `Ant` class
-- [ ] Add `energyConsumptionRate` property to control energy depletion
-- [ ] Implement energy visualization (color coding or indicators)
-- [ ] Create energy state thresholds (full, normal, hungry, starving)
+- [x] Add `energy` and `maxEnergy` properties to `Ant` class
+- [x] Add `energyConsumptionRate` property to control energy depletion
+- [x] Implement energy visualization (color coding or indicators)
+- [x] Create energy state thresholds (full, normal, hungry, starving)
 - [ ] Add `lastFedTime` property to track feeding intervals
 
 ### 2. Energy Consumption Mechanics
 
-- [ ] Implement base energy consumption over time
-- [ ] Add movement-based energy consumption
-- [ ] Add carrying-food energy penalty
-- [ ] Create speed adjustments based on energy levels
-- [ ] Implement varied consumption rates based on ant activities
+- [x] Implement base energy consumption over time
+- [x] Add movement-based energy consumption
+- [x] Add carrying-food energy penalty
+- [x] Create speed adjustments based on energy levels
+- [x] Implement varied consumption rates based on ant activities
 
 ### 3. Hunger State Behavior
 
-- [ ] Create behavioral changes for hungry ants
-- [ ] Implement starving ant behavior prioritizing nest return
-- [ ] Add visual indicators for different hunger states
+- [x] Create behavioral changes for hungry ants
+- [x] Implement starving ant behavior prioritizing nest return
+- [x] Add visual indicators for different hunger states
 - [ ] Implement desperate food-seeking behavior for starving ants
 - [ ] Add randomized energy thresholds for individual ant variation
 
 ### 4. Starvation Mechanics
 
-- [ ] Implement ant death when energy depleted
-- [ ] Add visual effects for dying ants
+- [x] Implement ant death when energy depleted
+- [x] Add visual effects for dying ants
 - [ ] Create corpse objects that can be consumed by other ants (optional)
-- [ ] Implement colony statistics tracking for starvation deaths
+- [x] Implement colony statistics tracking for starvation deaths
 - [ ] Add UI indicators for colony health based on starvation rate
 
 ### 5. Food Energy Value System
@@ -71,15 +71,15 @@ Phase 1 focuses on implementing an energy system for ants, including energy cons
 
 ### 6. Return-to-Nest Behavior
 
-- [ ] Create emergency return-to-nest trigger when starving
-- [ ] Implement direct pathfinding to nest for hungry ants
+- [x] Create emergency return-to-nest trigger when starving
+- [x] Implement direct pathfinding to nest for hungry ants
 - [ ] Add pheromone preference adjustments for hungry ants
 - [ ] Create temporary energy boost for critical returns
 - [ ] Implement nest-seeking sensor range increase for hungry ants
 
 ### 7. UI Enhancements for Energy System
 
-- [ ] Add energy level indicators for selected ants
+- [x] Add energy level indicators for selected ants
 - [ ] Create colony-wide energy statistics panel
 - [ ] Implement starvation risk warning indicators
 - [ ] Add energy consumption rate controls
@@ -103,8 +103,8 @@ Phase 1 focuses on implementing an energy system for ants, including energy cons
 
 ### 10. Visual Debugging Tools
 
-- [ ] Create toggleable energy state overlays
-- [ ] Implement hunger state visualization mode
+- [x] Create toggleable energy state overlays
+- [x] Implement hunger state visualization mode
 - [ ] Add path visualization for starving ants
 - [ ] Create energy consumption/restoration event indicators
 - [ ] Implement statistics panel for energy system debugging

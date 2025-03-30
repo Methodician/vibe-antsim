@@ -249,7 +249,7 @@ export class SimulationEngine {
     // Clear canvas
     // ctx.clearRect(0, 0, this.width, this.height); // Keep for full redraw
     // Optimization: Fill with a background color instead of clearing transparent
-    ctx.fillStyle = '#1a1a1a'; // Dark background
+    ctx.fillStyle = '#f0f0f0'; // Light background
     ctx.fillRect(0, 0, this.width, this.height);
 
     // Draw Pheromones (only in debug mode)

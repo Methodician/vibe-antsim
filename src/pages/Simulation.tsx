@@ -9,7 +9,7 @@ const Simulation: React.FC = () => {
   const [antCount, setAntCount] = useState<number>(50); // Default 50 ants
   const [pheromoneDecayRate, setPheromoneDecayRate] = useState<number>(0.995);
   const [foodSpawnInterval, setFoodSpawnInterval] = useState<number>(10000);
-  const [diffusionRate, setDiffusionRate] = useState<number>(0.05);
+  const [diffusionRate, setDiffusionRate] = useState<number>(0.005);
   const [debugMode, setDebugMode] = useState<boolean>(false); // State for debug mode
   const [stats, setStats] = useState({
     time: '00:00',
@@ -396,8 +396,8 @@ const Simulation: React.FC = () => {
               type="range"
               id="diffusionRate"
               min="0"
-              max="0.5" // Max diffusion rate
-              step="0.01"
+              max="0.05" // Max diffusion rate
+              step="0.001"
               value={diffusionRate}
               onChange={handleDiffusionRateChange}
             />

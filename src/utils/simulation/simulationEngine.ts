@@ -25,10 +25,10 @@ export class SimulationEngine {
   foodSources: FoodSource[];
   lastFoodSpawnTime: number;
   foodSpawnInterval: number;
+  selectedAnt: Ant | null = null; // Add property to hold the selected ant
 
   // --- Statistics ---
   simulationStartTime: number;
-  // totalFoodCollected: number; // Now tracked within Nest.foodStored
   starvationDeaths: number; // New stat
   // --- End Statistics ---
 
@@ -44,6 +44,7 @@ export class SimulationEngine {
     this.foodSources = [];
     this.lastFoodSpawnTime = 0;
     this.foodSpawnInterval = 10000; // Default interval (10 seconds)
+    this.selectedAnt = null; // Initialize in constructor as well
 
     // --- Initialize Stats ---
     this.simulationStartTime = 0;
@@ -62,6 +63,7 @@ export class SimulationEngine {
     // Reset stats
     this.simulationStartTime = Date.now();
     this.starvationDeaths = 0; // Reset deaths on initialize
+    this.selectedAnt = null; // Reset selected ant on initialize
 
     // Create ants near the nest
     for (let i = 0; i < antCount; i++) {
@@ -160,12 +162,12 @@ export class SimulationEngine {
         this.ants.push(ant);
       }
     } else {
-      // Remove excess ants (remove randomly or the oldest/weakest?)
-      // Simple slice for now: removes the newest ants first.
-      this.ants = this.ants.slice(0, newCount);
-      // Reset starvation counter if removing ants this way, as it becomes inaccurate
-      // Or, only count deaths naturally occurring in update()
-      // Let's stick to only counting natural deaths.
+      // Remove excess ants (removes the newest ants first).
+      this.ants.length = newCount; // More direct way to truncate the array
+      // If an ant being removed was selected, deselect it.
+      if (this.selectedAnt && !this.ants.includes(this.selectedAnt)) {
+        this.selectedAnt = null;
+      }
     }
     this.updateAntStats(); // Update stats after changing count
   }
@@ -206,49 +208,41 @@ export class SimulationEngine {
     this.pheromones.diffuse();
 
     // 2. Update ants
-    let newlyDeadThisTick = 0;
-    // Iterate backwards for safe removal if we decide to remove immediately
-    for (let i = this.ants.length - 1; i >= 0; i--) {
-      const ant = this.ants[i];
+    // Iterate forward and build a new array of live ants or update in place
+    for (const ant of this.ants) {
       if (!ant.isDead) {
-        const wasAlive = true;
-        // Pass necessary info to ant's move method
         ant.move(this.width, this.height, this.pheromones, this.foodSources);
-
-        // Check if the ant died during its move update
-        if (ant.isDead && wasAlive) {
-          newlyDeadThisTick++;
-        }
-      }
-
-      // Alternative: Remove dead ants here instead of filtering later
-      if (ant.isDead) {
-        // this.ants.splice(i, 1); // Remove the dead ant
-        // this.starvationDeaths++; // Increment here if removing immediately
       }
     }
 
     // Filter dead ants *after* all updates are done for the tick
-    // This prevents issues with array length changing during iteration if not looping backward/splicing carefully.
-    const liveAnts = this.ants.filter((ant) => !ant.isDead);
-    const deadThisFrame = this.ants.length - liveAnts.length;
+    const initialAntCount = this.ants.length;
+    this.ants = this.ants.filter((ant) => !ant.isDead);
+    const deadThisFrame = initialAntCount - this.ants.length;
     this.starvationDeaths += deadThisFrame;
-    this.ants = liveAnts;
 
     // 3. Update food sources (remove depleted ones)
     this.foodSources = this.foodSources.filter((fs) => !fs.isDepleted());
 
     // 4. Spawn new food periodically
     // Check interval and if there's space for more food
+    const maxFoodSources = 5; // Consider making this a class property or constant
     if (
-      this.foodSources.length < 5 && // Use the maxFoodSources limit potentially
+      this.foodSources.filter((fs) => !fs.isDepleted()).length <
+        maxFoodSources &&
       now - this.lastFoodSpawnTime > this.foodSpawnInterval
     ) {
       this.spawnFoodSource(); // Spawn randomly
     }
 
-    // 5. Update aggregate statistics (can be done less frequently for performance)
+    // 5. Update aggregate statistics
     this.updateAntStats(); // Update counts of foraging/returning ants
+
+    // Ensure selected ant exists and is still alive
+    // (Already handled by the filter and updateAntCount checks implicitly)
+    if (this.selectedAnt && this.selectedAnt.isDead) {
+      this.selectedAnt = null; // Deselect if dead
+    }
   } // End update method
 
   render(ctx: CanvasRenderingContext2D): void {
@@ -281,8 +275,8 @@ export class SimulationEngine {
     // Draw living ants on top
     this.ants.forEach((ant) => {
       if (!ant.isDead) {
-        // Ensure only living ants are drawn here
-        ant.draw(ctx, this.debugMode);
+        // Pass whether this ant is the selected one to the draw method
+        ant.draw(ctx, this.debugMode, ant === this.selectedAnt);
       }
     });
   } // End render method
@@ -444,7 +438,40 @@ export class SimulationEngine {
   resetSimulation(): void {
     this.stop(); // Stop simulation if running
     this.initialize(this.ants.length > 0 ? this.ants.length : 50); // Re-initialize with current ant count or default
+    this.selectedAnt = null; // Ensure reset on simulation reset
     console.log('Simulation reset.');
+  }
+
+  selectAntAt(
+    clickX: number,
+    clickY: number,
+    selectionRadius: number = 10 // Consider making this slightly larger for easier clicking
+  ): void {
+    let foundAnt: Ant | null = null;
+    let minDistanceSq = selectionRadius * selectionRadius;
+
+    // Iterate backwards to prioritize ants drawn on top (usually later in the array)
+    for (let i = this.ants.length - 1; i >= 0; i--) {
+      const ant = this.ants[i];
+      if (ant.isDead) continue; // Don't select dead ants
+
+      const dx = ant.x - clickX;
+      const dy = ant.y - clickY;
+      const distanceSq = dx * dx + dy * dy;
+
+      if (distanceSq < minDistanceSq) {
+        minDistanceSq = distanceSq;
+        foundAnt = ant;
+      }
+    }
+
+    this.selectedAnt = foundAnt;
+    // Optional: Remove console logs for production/cleaner output
+    // if (this.selectedAnt) {
+    //   console.log(`Selected Ant ID: ${this.selectedAnt.id}`); // Log selection
+    // } else {
+    //   console.log('No ant selected.');
+    // }
   }
 }
 

@@ -149,14 +149,12 @@ export class Ant {
 
     // --- Energy Consumption ---
     let currentConsumption = this.energyConsumptionRate;
-    // Moving consumes base energy
-    currentConsumption += this.speed * 0.1; // Cost increases with speed
+    currentConsumption += this.speed * 0.1; // Cost increases with speed (0.1 is consumption factor)
     if (this.carryingFood) {
-      currentConsumption *= 1.5; // Carrying food costs more
+      currentConsumption *= 1.5; // Carrying food costs 50% more energy
     }
     this.consumeEnergy(currentConsumption);
-    // Check if died from consumption
-    if (this.isDead) return;
+    if (this.isDead) return; // Check if died from consumption
     // --- End Energy Consumption ---
 
     // --- Update State Based on Energy ---
@@ -165,9 +163,7 @@ export class Ant {
     // --- End Update State Based on Energy ---
 
     // --- Behavior Modifications Based on Hunger ---
-    // Starving ants prioritize returning to the nest
     if (this.hungerState === HungerState.STARVING && !this.returningToNest) {
-      // console.log(`Ant ${this.id} is starving, returning to nest.`); // Optional logging
       this.returningToNest = true;
       this.carryingFood = false; // Drop food if starving
       this.foodAmount = 0;
@@ -187,34 +183,28 @@ export class Ant {
       if (
         this.homeNest &&
         Math.hypot(this.x - this.homeNest.x, this.y - this.homeNest.y) <
-          this.homeNest.radius + 5 // Reduced range for arrival check
+          this.homeNest.radius + 5 // Arrival check range
       ) {
         if (this.carryingFood) {
-          this.homeNest.storeFood(this.foodAmount);
-          this.totalFoodCollected += this.foodAmount; // Update simulation-wide stat
+          this.homeNest.storeFood(this.foodAmount); // Nest handles storing food
           this.foodAmount = 0;
           this.carryingFood = false;
           this.color = '#333'; // Reset color after dropping food
 
-          // If starving, stay near nest (or implement feeding in Phase 2)
-          // If just returning with food, turn around
           if (this.hungerState !== HungerState.STARVING) {
             this.returningToNest = false;
-            this.direction += Math.PI + (Math.random() - 0.5) * 0.5; // Turn around with slight randomness
+            this.direction += Math.PI + (Math.random() - 0.5) * 0.5; // Turn around +/- 14 degrees
           } else {
-            // Starving ant reached nest - currently stops until Phase 2 feeding
-            this.speed = 0; // Stop movement
-            // Could eventually transition to a 'feeding' state here
+            // Starving ant reached nest - stops until Phase 2 feeding
+            this.speed = 0;
           }
         } else {
-          // Arrived at nest without food (likely starving or lost target)
+          // Arrived at nest without food
           if (this.hungerState === HungerState.STARVING) {
-            // Starving ant reached nest - stop until Phase 2 feeding
-            this.speed = 0;
+            this.speed = 0; // Stop until Phase 2 feeding
           } else {
-            // Returned for other reasons (e.g., lost target), turn around and explore
             this.returningToNest = false;
-            this.direction += Math.PI + (Math.random() - 0.5) * 0.5;
+            this.direction += Math.PI + (Math.random() - 0.5) * 0.5; // Turn around +/- 14 degrees
           }
         }
       } else if (this.homeNest) {
@@ -227,91 +217,82 @@ export class Ant {
           Math.sin(angleDiff),
           Math.cos(angleDiff)
         );
-        this.direction += normalizedAngleDiff * 0.2; // Gentle turn towards nest
+        // Turn factor towards nest (0.2 is turn speed)
+        this.direction += normalizedAngleDiff * 0.2;
 
-        // Optionally follow OUTBOUND pheromones back (helps find the way)
-        this.followPheromoneTrail(pheromones, PheromoneType.OUTBOUND, 0.1); // Lower weight when directly homing
+        // Follow OUTBOUND pheromones back (weight 0.1)
+        this.followPheromoneTrail(pheromones, PheromoneType.OUTBOUND, 0.1);
 
-        // Lay down INBOUND pheromones if carrying food
+        // Lay down INBOUND pheromones if carrying food (strength 2)
         if (this.carryingFood) {
-          pheromones.addPheromone(this.x, this.y, 2, PheromoneType.INBOUND); // Stronger signal when carrying
+          pheromones.addPheromone(this.x, this.y, 2, PheromoneType.INBOUND);
         }
       }
     }
     // Explore / Seek Food / Follow Trail if not returning and not actively moving to food
     else if (!this.targetFood) {
-      this.lookForFood(foodSources); // Check for nearby food first
+      this.lookForFood(foodSources);
       if (!this.targetFood) {
-        // If still no target after looking
-        // Follow INBOUND pheromones (strongest signals likely lead to food)
-        this.followPheromoneTrail(pheromones, PheromoneType.INBOUND, 0.3); // Higher weight for trail following
+        // Follow INBOUND pheromones (weight 0.3)
+        this.followPheromoneTrail(pheromones, PheromoneType.INBOUND, 0.3);
 
-        // Add some random turning to prevent getting stuck
+        // Random turning chance (10% chance) and angle (+/- 14 degrees)
         if (Math.random() < 0.1) {
           this.direction += (Math.random() - 0.5) * 0.5;
         }
 
-        // Lay down OUTBOUND pheromones when exploring
+        // Lay down OUTBOUND pheromones when exploring (strength 1)
         pheromones.addPheromone(this.x, this.y, 1, PheromoneType.OUTBOUND);
       } else {
-        // Found food via lookForFood, lay outbound pheromone while approaching
+        // Found food via lookForFood, lay outbound pheromone while approaching (strength 1)
         pheromones.addPheromone(this.x, this.y, 1, PheromoneType.OUTBOUND);
       }
     }
 
     // --- Update Position & Wall Avoidance ---
-    // Normalize direction before moving
     this.direction = Math.atan2(
       Math.sin(this.direction),
       Math.cos(this.direction)
     );
 
-    // Update position based on direction and speed
     this.x += Math.cos(this.direction) * this.speed;
     this.y += Math.sin(this.direction) * this.speed;
 
-    // Wall avoidance / boundary checks
-    const margin = 5; // Distance from edge to start turning
+    const margin = 5; // Wall avoidance margin
     let bounced = false;
 
-    // Left wall
     if (this.x < margin) {
       this.x = margin;
-      this.direction = Math.PI - this.direction + (Math.random() - 0.5) * 0.2; // Add randomness on bounce
+      // Bounce angle adjustment: PI - current + random +/- 6 degrees
+      this.direction = Math.PI - this.direction + (Math.random() - 0.5) * 0.2;
       bounced = true;
-    }
-    // Right wall
-    else if (this.x > width - margin) {
+    } else if (this.x > width - margin) {
       this.x = width - margin;
       this.direction = Math.PI - this.direction + (Math.random() - 0.5) * 0.2;
       bounced = true;
     }
 
-    // Top wall
     if (this.y < margin) {
       this.y = margin;
+      // Bounce angle adjustment: -current + random +/- 6 degrees
       this.direction = -this.direction + (Math.random() - 0.5) * 0.2;
       bounced = true;
-    }
-    // Bottom wall
-    else if (this.y > height - margin) {
+    } else if (this.y > height - margin) {
       this.y = height - margin;
       this.direction = -this.direction + (Math.random() - 0.5) * 0.2;
       bounced = true;
     }
 
-    // Normalize direction after bounce
     if (bounced) {
       this.direction = Math.atan2(
         Math.sin(this.direction),
         Math.cos(this.direction)
       );
+      // Note: `hasTurnedRecently` flag is set here but its usage in followPheromoneTrail
+      // is simple. Could be refined if more complex post-bounce behavior is needed.
       this.hasTurnedRecently = true;
-      // Use a simple flag reset mechanism instead of setTimeout for performance
-      // This requires a check at the start of the turn logic potentially.
-      // For now, let's remove the setTimeout. We can add a counter if needed.
     } else {
-      this.hasTurnedRecently = false; // Reset if no bounce occurred
+      this.hasTurnedRecently = false;
     }
   } // End move method
 
@@ -387,7 +368,7 @@ export class Ant {
       Math.cos(angleDiff)
     );
     // Turn faster when closer or angle difference is larger
-    const turnSpeed = Math.max(0.1, 0.5 * Math.abs(normalizedAngleDiff)); // Adjust turn speed dynamically
+    const turnSpeed = Math.max(0.1, 0.5 * Math.abs(normalizedAngleDiff));
     this.direction += normalizedAngleDiff * turnSpeed;
 
     // Check if we've reached the food source radius
@@ -405,7 +386,7 @@ export class Ant {
     }
 
     // Collect a fixed amount for simplicity now, could be variable later
-    const amountToTake = 10; // Example: take 10 units
+    const amountToTake = 10; // Amount of food collected per visit
     this.foodAmount = this.targetFood.takeFood(amountToTake);
 
     if (this.foodAmount > 0) {
@@ -434,7 +415,7 @@ export class Ant {
   followPheromoneTrail(
     pheromones: PheromoneGrid,
     type: PheromoneType,
-    weight: number = 0.5
+    weight: number = 0.5 // Weight factor for how strongly to follow trail vs wander
   ): void {
     if (this.hasTurnedRecently) return; // Don't check trails immediately after a bounce/turn
 
@@ -460,18 +441,17 @@ export class Ant {
 
     const totalPheromone = leftPheromone + aheadPheromone + rightPheromone;
 
-    // If no pheromones detected nearby, apply slight random turn
+    // Pheromone detection threshold (0.1)
     if (totalPheromone < 0.1) {
-      // Use a small threshold
+      // Random turn chance (15%) and angle (+/- 11.5 degrees) if no trail found
       if (Math.random() < 0.15) {
-        // Increase random turn chance slightly
-        this.direction += (Math.random() - 0.5) * 0.4; // Slightly wider random turn
+        this.direction += (Math.random() - 0.5) * 0.4;
       }
       return;
     }
 
-    // Steer towards stronger pheromones
-    const turnStrength = 0.3 * weight; // Base turning strength modified by weight
+    // Base turn strength factor towards pheromone (0.3), modified by weight
+    const turnStrength = 0.3 * weight;
     let turnAdjustment = 0;
 
     if (leftPheromone > aheadPheromone && leftPheromone > rightPheromone) {
@@ -486,24 +466,38 @@ export class Ant {
     }
     // If ahead is strongest or equal, continue mostly straight (small adjustment is fine)
     else if (aheadPheromone > 0) {
-      // Bias towards moving forward if pheromones exist ahead
-      // Optional: small centering adjustment if left/right are imbalanced but less than ahead
+      // Small centering adjustment if left/right imbalanced but less than ahead (factor 0.1)
       turnAdjustment =
         (turnStrength * 0.1 * (rightPheromone - leftPheromone)) /
         totalPheromone;
     }
 
-    // Apply the turn adjustment
     this.direction += turnAdjustment;
 
-    // Chance to ignore trail and explore randomly, reduced frequency
+    // Chance to ignore trail and explore randomly (1% chance), wider angle (+/- 28 degrees)
     if (Math.random() < 0.01) {
-      this.direction += (Math.random() - 0.5) * 1.0; // Wider random turn when ignoring trail
+      this.direction += (Math.random() - 0.5) * 1.0;
     }
   } // End followPheromoneTrail
 
-  draw(ctx: CanvasRenderingContext2D, debugMode: boolean = false): void {
-    if (this.isDead && !debugMode) return; // Don't draw dead ants unless debugging
+  draw(
+    ctx: CanvasRenderingContext2D,
+    debugMode: boolean = false,
+    isSelected: boolean = false
+  ): void {
+    if (this.isDead && !debugMode) return;
+
+    // --- Highlight Selected Ant ---
+    if (isSelected) {
+      ctx.save(); // Save context to avoid affecting other drawing
+      ctx.strokeStyle = '#FFFF00'; // Yellow highlight color
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size + 4, 0, Math.PI * 2); // Draw circle around the ant
+      ctx.stroke();
+      ctx.restore(); // Restore context
+    }
+    // --- End Highlight ---
 
     // Determine color based on state
     let antColor;
@@ -655,9 +649,4 @@ export class Ant {
       ctx.restore(); // Restore context state
     }
   } // End draw method
-
-  // Add totalFoodCollected property to be updated by the Ant
-  // This isn't ideal OO design, but necessary for the current stat tracking in SimulationEngine
-  // A better approach might involve event emitters or passing callbacks.
-  totalFoodCollected: number = 0;
 } // End Ant class

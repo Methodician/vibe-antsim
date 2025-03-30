@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { SimulationEngine } from '../utils/simulationEngine';
+import { SimulationEngine } from '../utils/simulation/simulationEngine';
+import { Ant, HungerState } from '../utils/simulation/ant'; // Import Ant and HungerState
 import './Simulation.css'; // Assuming you have some CSS
 
 const Simulation: React.FC = () => {
@@ -10,7 +11,10 @@ const Simulation: React.FC = () => {
   const [pheromoneDecayRate, setPheromoneDecayRate] = useState<number>(0.995);
   const [foodSpawnInterval, setFoodSpawnInterval] = useState<number>(10000);
   const [diffusionRate, setDiffusionRate] = useState<number>(0.005);
-  const [debugMode, setDebugMode] = useState<boolean>(false); // State for debug mode
+  const [debugMode, setDebugMode] = useState<boolean>(true); // State for debug mode
+  const [selectedAntDetails, setSelectedAntDetails] = useState<Ant | null>(
+    null
+  ); // State for selected ant details
   const [stats, setStats] = useState({
     time: '00:00',
     foodCollected: 0, // Now represents nest storage
@@ -85,7 +89,7 @@ const Simulation: React.FC = () => {
     // Set simulation parameters
     simulation.setPheromoneDecayRate(pheromoneDecayRate);
     simulation.setFoodSpawnInterval(foodSpawnInterval);
-    simulation.setDiffusionRate(diffusionRate);
+    simulation.setPheromoneDiffusionRate(diffusionRate);
     simulation.setDebugMode(debugMode); // Ensure debug mode is set
 
     // Initialize with the given ant count
@@ -98,6 +102,7 @@ const Simulation: React.FC = () => {
 
     // Reset stats display immediately
     updateStats();
+    setSelectedAntDetails(null); // Clear selected ant on initialize
   };
 
   // Handle simulation running state changes
@@ -167,7 +172,7 @@ const Simulation: React.FC = () => {
   }, [foodSpawnInterval]);
 
   useEffect(() => {
-    simulationRef.current?.setDiffusionRate(diffusionRate);
+    simulationRef.current?.setPheromoneDiffusionRate(diffusionRate);
   }, [diffusionRate]);
 
   // Update debug mode when state changes
@@ -179,6 +184,16 @@ const Simulation: React.FC = () => {
       if (ctx) simulationRef.current.render(ctx);
     }
   }, [debugMode, isRunning]); // Add isRunning dependency
+
+  // Update selected ant details when simulation state changes (e.g., ant dies)
+  useEffect(() => {
+    if (simulationRef.current) {
+      // Sync UI state with engine state if the selected ant differs (e.g., deselected in engine)
+      if (selectedAntDetails !== simulationRef.current.selectedAnt) {
+        setSelectedAntDetails(simulationRef.current.selectedAnt);
+      }
+    }
+  }, [stats, selectedAntDetails]); // Re-check when stats update (as update runs in engine) or if selectedAntDetails changes
 
   // Function to update statistics
   const updateStats = () => {
@@ -198,6 +213,16 @@ const Simulation: React.FC = () => {
       totalAnts: antStats.total,
       starvationDeaths: antStats.dead, // Get dead count
     });
+
+    // Update selected ant details as well (might change state like energy)
+    if (simulationRef.current && simulationRef.current.selectedAnt) {
+      // Update the details state with the current state of the selected ant
+      // Assign the actual Ant instance directly
+      setSelectedAntDetails(simulationRef.current.selectedAnt);
+    } else if (selectedAntDetails !== null) {
+      // If engine has no selected ant but UI state does, clear UI state
+      setSelectedAntDetails(null);
+    }
   };
 
   const startSimulation = () => setIsRunning(true);
@@ -212,6 +237,7 @@ const Simulation: React.FC = () => {
 
     // Initialize with current ant count
     initializeSimulation(antCount);
+    setSelectedAntDetails(null); // Clear selection on reset
   };
 
   const handleAntCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -257,7 +283,7 @@ const Simulation: React.FC = () => {
     setDebugMode(e.target.checked);
   };
 
-  // Function to handle canvas click for nest placement
+  // Modified function to handle canvas click for ANT SELECTION
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     const simulation = simulationRef.current;
@@ -268,36 +294,120 @@ const Simulation: React.FC = () => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Update nest position
-    simulation.setNestPosition(x, y);
+    // --- Ant Selection Logic ---
+    simulation.selectAntAt(x, y);
+    // Update state with the selected ant object (or null)
+    setSelectedAntDetails(
+      simulation.selectedAnt // Assign the actual instance or null
+    );
+    // --- End Ant Selection ---
 
-    // Reinitialize to place ants at the new nest location
-    const wasRunning = isRunning;
-    // Stop simulation *before* reinitializing
-    if (wasRunning) {
-      stopSimulation(); // This now handles stopping animation loop and stats interval
-    }
+    /* --- Old Nest Placement Logic (Removed Commented Out Block) --- */
+    // Removed the large block of commented-out code here for clarity.
+  };
 
-    // Reinitialize immediately
-    initializeSimulation(antCount);
-
-    // Restart if it was running before
-    if (wasRunning) {
-      // Use setTimeout to allow React state update to process before restarting
-      setTimeout(() => startSimulation(), 50);
-    } else {
-      // If it wasn't running, render the new initial state
-      const ctx = canvas.getContext('2d');
-      if (ctx) simulation.render(ctx);
-    }
+  // Helper to format hunger state
+  const formatHungerState = (state: HungerState | undefined): string => {
+    if (state === undefined) return 'N/A';
+    return HungerState[state];
   };
 
   return (
     <div>
       <h1>Ant Simulation - Phase 1: Energy</h1>
 
-      {/* Stats display */}
+      {/* Basic controls (Moved to top) */}
+      <div className="simulation-controls">
+        <button onClick={startSimulation} disabled={isRunning}>
+          Start
+        </button>
+        <button onClick={stopSimulation} disabled={!isRunning}>
+          Stop
+        </button>
+        <button onClick={resetSimulation}>Reset</button>
+      </div>
+
+      {/* Simulation Canvas Container (Moved up) */}
+      <div className="simulation-container">
+        <p className="nest-instruction">Click canvas to select an ant.</p>
+        <canvas
+          ref={canvasRef}
+          width={800}
+          height={600}
+          className="simulation-canvas"
+          onClick={handleCanvasClick} // Click now selects ants
+        />
+      </div>
+
+      {/* --- Selected Ant Details Display (Moved below canvas) --- */}
+      {selectedAntDetails && (
+        <div className="selected-ant-details">
+          <h3>Selected Ant (ID: {selectedAntDetails.id})</h3>
+          <div className="stats-container">
+            <div className="stat-item">
+              <span className="stat-label">State:</span>
+              <span className="stat-value">
+                {formatHungerState(selectedAntDetails.hungerState)}
+              </span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">Energy:</span>
+              <span className="stat-value">
+                {selectedAntDetails.energy.toFixed(1)} /{' '}
+                {selectedAntDetails.maxEnergy}
+              </span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">Position:</span>
+              <span className="stat-value">
+                ({selectedAntDetails.x.toFixed(0)},{' '}
+                {selectedAntDetails.y.toFixed(0)})
+              </span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">Direction:</span>
+              <span className="stat-value">
+                {(selectedAntDetails.direction * (180 / Math.PI)).toFixed(0)}°
+              </span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">Speed:</span>
+              <span className="stat-value">
+                {selectedAntDetails.speed.toFixed(2)}
+              </span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">Carrying Food:</span>
+              <span className="stat-value">
+                {selectedAntDetails.carryingFood ? 'Yes' : 'No'} (
+                {selectedAntDetails.foodAmount})
+              </span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">Returning Nest:</span>
+              <span className="stat-value">
+                {selectedAntDetails.returningToNest ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">Targeting Food:</span>
+              <span className="stat-value">
+                {selectedAntDetails.targetFood
+                  ? `Yes (${selectedAntDetails.targetFood.x.toFixed(
+                      0
+                    )},${selectedAntDetails.targetFood.y.toFixed(0)})`
+                  : 'No'}
+              </span>
+            </div>
+            {/* Add more properties using the same stat-item structure */}
+          </div>
+        </div>
+      )}
+      {/* --- End Selected Ant Details --- */}
+
+      {/* Stats display (Moved below canvas/details) */}
       <div className="simulation-stats">
+        <h3>Simulation Stats</h3>
         <div className="stats-container">
           <div className="stat-item">
             <span className="stat-label">Time:</span>
@@ -331,20 +441,9 @@ const Simulation: React.FC = () => {
         </div>
       </div>
 
-      {/* Basic controls */}
-      <div className="simulation-controls">
-        <button onClick={startSimulation} disabled={isRunning}>
-          Start
-        </button>
-        <button onClick={stopSimulation} disabled={!isRunning}>
-          Stop
-        </button>
-        <button onClick={resetSimulation}>Reset</button>
-      </div>
-
-      {/* Advanced controls */}
+      {/* Advanced controls (Moved to bottom) */}
       <div className="advanced-controls">
-        <h3>Simulation Parameters</h3>
+        <h3>Advanced Controls</h3>
         <div className="control-grid">
           <div className="control-item">
             <label htmlFor="antCount">Ant Count: {antCount}</label>
@@ -415,19 +514,6 @@ const Simulation: React.FC = () => {
             <small>(Show pheromones, energy/state text)</small>
           </div>
         </div>
-      </div>
-
-      <div className="simulation-container">
-        <p className="nest-instruction">
-          Click canvas to place nest & reset simulation.
-        </p>
-        <canvas
-          ref={canvasRef}
-          width={800}
-          height={600}
-          className="simulation-canvas"
-          onClick={handleCanvasClick}
-        />
       </div>
     </div>
   );

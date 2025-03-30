@@ -1,7 +1,9 @@
 /* src/pages/Simulation.css */
 
-.simulation-stats {
+.simulation-stats,
+.selected-ant-details {
   margin-bottom: 20px;
+  margin-top: 20px;
   padding: 15px;
   border: 1px solid #ccc;
   border-radius: 5px;
